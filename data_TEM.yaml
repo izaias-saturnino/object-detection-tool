@@ -1,0 +1,7 @@
+# classes
+names:
+  0: 'particle'
+# number of classes
+nc: 1
+train: data_TEM/images/train
+val: data_TEM/images/val
