@@ -43,6 +43,8 @@ def save_obbs_to_csv(results, output_path, write_ids=False):
         image_name, _ = os.path.splitext(os.path.basename(image_path))
         csv_path = os.path.join(output_path, image_name + ".csv")
 
+        image = None
+
         if write_ids:
             image = cv2.imread(image_path)
             image_filename = os.path.basename(image_path)
@@ -52,8 +54,12 @@ def save_obbs_to_csv(results, output_path, write_ids=False):
 
         image_name = os.path.basename(image_path)
         obbs = results[i].obb.xyxyxyxy
+
+        # order the obbs by their y1 value and then by their x1 value
+        obbs = sorted(obbs, key=lambda obb: (obb[0][1], obb[0][0]))
+
         with open(csv_path, "w") as file:
-            file.write("obb_id, image_name, height, width, angle1, angle2, x1, y1, x2, y2, x3, y3, x4, y4\n")
+            file.write("obb_id, height, width, angle1, angle2, x1, y1, x2, y2, x3, y3, x4, y4\n")
             obb_id = 1
             for obb in obbs:
                 x1 = obb[0][0]
@@ -70,19 +76,19 @@ def save_obbs_to_csv(results, output_path, write_ids=False):
                 # calculate the angle of the obb based on the first two points
                 angle1 = np.arctan2(y2 - y1, x2 - x1)
                 angle2 = np.arctan2(y3 - y2, x3 - x2)
-                file.write(f"{obb_id}, {image_name}, {height}, {width}, {angle1}, {angle2}, {x1}, {y1}, {x2}, {y2}, {x3}, {y3}, {x4}, {y4}\n")
+                file.write(f"{obb_id}, {height}, {width}, {angle1}, {angle2}, {x1}, {y1}, {x2}, {y2}, {x3}, {y3}, {x4}, {y4}\n")
             
                 if write_ids:
+                    x1 = int(x1)
+                    y1 = int(y1)
+                    x2 = int(x2)
+                    y2 = int(y2)
+                    x3 = int(x3)
+                    y3 = int(y3)
+                    x4 = int(x4)
+                    y4 = int(y4)
                     # draw the bounding boxes on the image
                     height, width, _ = image.shape
-                    x1 = int(x1 * width)
-                    y1 = int(y1 * height)
-                    x2 = int(x2 * width)
-                    y2 = int(y2 * height)
-                    x3 = int(x3 * width)
-                    y3 = int(y3 * height)
-                    x4 = int(x4 * width)
-                    y4 = int(y4 * height)
                     cv2.line(image, (x1, y1), (x2, y2), (0, 255, 0), 2)
                     cv2.line(image, (x2, y2), (x3, y3), (0, 255, 0), 2)
                     cv2.line(image, (x3, y3), (x4, y4), (0, 255, 0), 2)
@@ -108,7 +114,7 @@ def run_detections(models_path, model_name, confidence, save_results, detection_
     retain_output(run_dir)
 
     if save_csv:
-        save_obbs_to_csv(results, detection_path, write_ids)
+        save_obbs_to_csv(results, detection_data, write_ids)
 
 def train_detection(model_name, base_model, data_file, max_epochs, models_path, patience=100, save_period=10):
     print("Training detection...")
