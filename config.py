@@ -15,6 +15,7 @@ def load_config(config_file, verbose=False):
     raw_data = "raw_data"
     temp_data = "temp_data"
     clean_data = "clean_data"
+    detection_data = "detection_data"
 
     default_model = "yolo11n-obb_test.pt_20250218-072546.pt"
     default_base_model = "yolo11n-obb.pt"
@@ -51,6 +52,8 @@ def load_config(config_file, verbose=False):
         config["temp_data"] = temp_data
     if "clean_data" not in config:
         config["clean_data"] = clean_data
+    if "detection_data" not in config:
+        config["detection_data"] = detection_data
     if "default_model" not in config:
         config["default_model"] = default_model
     if "default_base_model" not in config:

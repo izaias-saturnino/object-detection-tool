@@ -26,6 +26,7 @@ mode = config["mode"]
 raw_data = config["raw_data"]
 temp_data = config["temp_data"]
 clean_data = config["clean_data"]
+detection_data = config["detection_data"]
 default_model = config["default_model"]
 default_base_model = config["default_base_model"]
 default_yaml = config["default_yaml"]
@@ -100,16 +101,11 @@ def retain_output(run_dir):
 
 def run_detections(models_path, model_name, confidence, save_results, detection_path, save_csv=False, write_ids=False):
     print("Running detection...")
-    run_dir, results = run_model(models_path, model_name, confidence, save_results, detection_path, detection_path, temp_data)
+    run_dir, results = run_model(models_path, model_name, confidence, save_results, detection_path, detection_path, detection_data)
     retain_output(run_dir)
 
     if save_csv:
         save_obbs_to_csv(results, detection_path, write_ids)
-
-    # try:
-    #     shutil.rmtree(temp_data)
-    # except:
-    #     pass
 
 def train_detection(model_name, base_model, data_file, max_epochs, models_path, patience=100, save_period=10):
     print("Training detection...")
