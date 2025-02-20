@@ -3,11 +3,12 @@ import numpy as np
 from math import ceil, floor
 import cv2
 from image_management import get_image_path
+import pickle
 
 image_types = [".jpg", ".jpeg", ".png", ".bmp", ".tif", ".tiff"]
 default_image_type = ".png"
-images_dirs = ["clean_data-obb"]
-labels_dirs = ["clean_data-obb"]
+images_dirs = ["clean_data"]
+labels_dirs = ["clean_data"]
 output_images_dirs = ["clean_data-obb_resized"]
 output_labels_dirs = ["clean_data-obb_resized"]
 
@@ -242,6 +243,7 @@ def resize_image_and_labels(image, labels, resize):
         return new_images, new_labels
 
 def resize_images(images_dirs, labels_dirs, output_images_dirs, output_labels_dirs, resize_by="median", base_class=0, acceptable_error=0.001):
+    operations_stats = {}
     for images_dir, labels_dir, output_images_dir, output_labels_dir in zip(images_dirs, labels_dirs, output_images_dirs, output_labels_dirs):
         if not os.path.exists(output_images_dir):
             os.makedirs(output_images_dir)
@@ -258,12 +260,17 @@ def resize_images(images_dirs, labels_dirs, output_images_dirs, output_labels_di
         results, obb_labels = read_results(labels_dir_path, verbose=False)
         individual_stats, general_stats = get_results_stats(results, obb_labels=obb_labels, verbose=False)
 
+        print("general_stats:", general_stats)
+
         resize_operations = {}
+
+        general_stats_resize_stat = general_stats[resize_by]
 
         for key in individual_stats:
             individual_stat = individual_stats[key]
+            print("individual_stat:", individual_stat)
+            print("key:", key)
             individual_resize_stat = individual_stat[resize_by]
-            general_stats_resize_stat = general_stats[resize_by]
             resize_operations[key] = individual_resize_stat/general_stats_resize_stat
 
         # if bigger than one, make image smaller, if smaller than one, fill image to be able to break it down into smaller images (int)
@@ -297,6 +304,14 @@ def resize_images(images_dirs, labels_dirs, output_images_dirs, output_labels_di
                         for label in resized_image_labels:
                             f.write(str(base_class) + " " + " ".join([str(x) for x in label]) + "\n")
                     counter += 1
+        
+        operations_stats[images_dir] = {}
+        operations_stats[images_dir]["individual_stats"] = individual_stats
+        operations_stats[images_dir]["general_stats"] = general_stats
+    operations_stats["resize_by"] = resize_by
+
+    return operations_stats
 
 if __name__ == "__main__":
-    resize_images(images_dirs, labels_dirs, output_images_dirs, output_labels_dirs, resize_by="median")
+    # resize_images(images_dirs, labels_dirs, output_images_dirs, output_labels_dirs, resize_by="median")
+    operations_stats = resize_images(["clean_data"], ["clean_data"], ["clean_data_resized"], ["clean_data_resized"], resize_by="median")
