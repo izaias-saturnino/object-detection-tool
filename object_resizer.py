@@ -157,7 +157,7 @@ def fill_labels(labels, resize):
         new_labels.append(new_label)
     return new_labels
 
-def break_image(image, labels, resize):
+def break_image(image, labels, resize, borders=False):
     if resize == 1:
         return [image]
     if resize >= 1:
@@ -169,11 +169,22 @@ def break_image(image, labels, resize):
     height_resize = height / new_height
     images = []
     new_labels = []
-    for i in range(ceil(height/new_height)):
-        for j in range(ceil(width/new_width)):
+    
+    catch_borders_factor = 1
+    if borders:
+        catch_borders_factor = 0.5
+
+    height_step = new_height * catch_borders_factor
+    width_step = new_width * catch_borders_factor
+
+    block_width = ceil(width/width_step)
+    block_height = ceil(height/height_step)
+
+    for i in range(ceil(height/height_step)):
+        for j in range(ceil(width/width_step)):
             new_image = np.ones((new_height, new_width, channels), np.uint8) * 255
-            starting_height = i * new_height
-            starting_width = j * new_width
+            starting_height = i * height_step
+            starting_width = j * width_step
             next_height = min(starting_height + new_height, height)
             next_width = min(starting_width + new_width, width)
             if starting_height >= height or starting_width >= width:
@@ -211,116 +222,111 @@ def break_image(image, labels, resize):
                 
             new_labels.append(image_labels)
     
-    return images, new_labels
+    break_metadata = {"height_step": height_step, "width_step": width_step, "height": height, "width": width, "new_height": new_height, "new_width": new_width, "block_height": block_height, "block_width": block_width}
 
-def break_label(label, resize):
-    if resize == 1:
-        return [label]
-    if resize >= 1:
-        raise Exception("Error: Resize must be smaller than one.")
-    x1, y1, x2, y2, x3, y3, x4, y4 = label
-
-    new_x1 = (x1 - floor(x1/resize) * resize) / resize
-    new_y1 = (y1 - floor(y1/resize) * resize) / resize
-    new_x2 = (x2 - floor(x2/resize) * resize) / resize
-    new_y2 = (y2 - floor(y2/resize) * resize) / resize
-    new_x3 = (x3 - floor(x3/resize) * resize) / resize
-    new_y3 = (y3 - floor(y3/resize) * resize) / resize
-    new_x4 = (x4 - floor(x4/resize) * resize) / resize
-    new_y4 = (y4 - floor(y4/resize) * resize) / resize
-
-    return [[new_x1, new_y1, new_x2, new_y2, new_x3, new_y3, new_x4, new_y4]]
+    return images, new_labels, break_metadata
     
-def resize_image_and_labels(image, labels, resize):
+def resize_image_and_labels(image, labels, resize, borders=False):
     if resize == 1:
         return [image], labels
     if resize >= 1:
         new_image = fill_image(image, resize)
         new_labels = fill_labels(labels, resize)
-        return [new_image], [new_labels]
+        break_metadata = None
+        return [new_image], [new_labels], break_metadata
     if resize < 1:
-        new_images, new_labels = break_image(image, labels, resize)
-        return new_images, new_labels
+        new_images, new_labels, break_metadata = break_image(image, labels, resize, borders=borders)
+        return new_images, new_labels, break_metadata
 
-def resize_images(images_dirs, labels_dirs, output_images_dirs, output_labels_dirs, resize_by="median", base_class=0, acceptable_error=0.001, verbose=False):
+def resize_images(images_dir, labels_dir, output_images_dir, output_labels_dir, resize_stat_name="median", resize_stat_value=None, base_class=0, acceptable_error=0.001, verbose=False, borders=False):
     operations_stats = {}
-    for images_dir, labels_dir, output_images_dir, output_labels_dir in zip(images_dirs, labels_dirs, output_images_dirs, output_labels_dirs):
-        if not os.path.exists(output_images_dir):
-            os.makedirs(output_images_dir)
-        if not os.path.exists(output_labels_dir):
-            os.makedirs(output_labels_dir)
-        if not os.path.exists(images_dir):
-            raise Exception("Error: Images directory not found.")
-        if not os.path.exists(labels_dir):
-            raise Exception("Error: Labels directory not found.")
 
-        images_dir_path = images_dir
+    if not os.path.exists(output_images_dir):
+        os.makedirs(output_images_dir)
+    if not os.path.exists(output_labels_dir):
+        os.makedirs(output_labels_dir)
+    if not os.path.exists(images_dir):
+        raise Exception("Error: Images directory not found.")
+    if not os.path.exists(labels_dir):
+        raise Exception("Error: Labels directory not found.")
 
-        labels_dir_path = labels_dir
-        results, obb_labels = read_results(labels_dir_path, verbose=False)
-        individual_stats, general_stats = get_results_stats(results, obb_labels=obb_labels, verbose=False)
+    images_dir_path = images_dir
+
+    labels_dir_path = labels_dir
+    results, obb_labels = read_results(labels_dir_path, verbose=False)
+    individual_stats, general_stats = get_results_stats(results, obb_labels=obb_labels, verbose=False)
+
+    if verbose:
+        print("general_stats:", general_stats)
+
+    resize_operations = {}
+
+    if resize_stat_value == None:
+        resize_stat_value = general_stats[resize_stat_name]
+
+    for key in individual_stats:
+        individual_stat = individual_stats[key]
+        individual_resize_stat = individual_stat[resize_stat_name]
+        resize_operations[key] = individual_resize_stat/resize_stat_value
 
         if verbose:
-            print("general_stats:", general_stats)
+            print("key:", key)
+            print("individual_stat:", individual_stat)
 
-        resize_operations = {}
+    break_metadatas = {}
 
-        general_stats_resize_stat = general_stats[resize_by]
+    # if bigger than one, make image smaller, if smaller than one, fill image to be able to break it down into smaller images (int)
+    for key in resize_operations:
+        resize_factor = resize_operations[key]
 
-        for key in individual_stats:
-            individual_stat = individual_stats[key]
-            individual_resize_stat = individual_stat[resize_by]
-            resize_operations[key] = individual_resize_stat/general_stats_resize_stat
+        output_image_filename = key + default_image_type
+        output_image_path = os.path.join(output_images_dir, output_image_filename)
 
-            if verbose:
-                print("key:", key)
-                print("individual_stat:", individual_stat)
+        image_path = get_image_path(images_dir_path, key)
 
-        # if bigger than one, make image smaller, if smaller than one, fill image to be able to break it down into smaller images (int)
-        for key in resize_operations:
-            resize_factor = resize_operations[key]
+        if image_path == None:
+            print("key:", key)
+            raise Exception("Error: Image not found.")
 
-            output_image_filename = key + default_image_type
-            output_image_path = os.path.join(output_images_dir, output_image_filename)
+        image = cv2.imread(image_path)
 
-            image_path = get_image_path(images_dir_path, key)
+        if abs(resize_factor - 1) < acceptable_error:
+            cv2.imwrite(output_image_path, image)
+        else:
+            resized_images, resized_labels, break_metadata = resize_image_and_labels(image, results[key], resize_factor, borders=borders)
 
-            if image_path == None:
-                print("key:", key)
-                raise Exception("Error: Image not found.")
+            if break_metadata != None:
+                break_metadata["image_path"] = image_path
+                break_metadatas[key] = break_metadata
 
-            image = cv2.imread(image_path)
+            counter = 1
+            for resized_image, resized_image_labels in zip(resized_images, resized_labels):
+                if len(resized_images) == 1:
+                    resized_image_filename = key + default_image_type
+                    resized_image_labels_filename = key + ".txt"
+                else:
+                    resized_image_filename = key + "_" + str(counter) + default_image_type
+                    resized_image_labels_filename = key + "_" + str(counter) + ".txt"
+                
+                resized_image_path = os.path.join(output_images_dir, resized_image_filename)
+                cv2.imwrite(resized_image_path, resized_image)
 
-            if abs(resize_factor - 1) < acceptable_error:
-                cv2.imwrite(output_image_path, image)
-            else:
-                resized_images, resized_labels = resize_image_and_labels(image, results[key], resize_factor)
-                counter = 1
-                for resized_image, resized_image_labels in zip(resized_images, resized_labels):
-                    if len(resized_images) == 1:
-                        resized_image_filename = key + default_image_type
-                        resized_image_labels_filename = key + ".txt"
-                    else:
-                        resized_image_filename = key + "_" + str(counter) + default_image_type
-                        resized_image_labels_filename = key + "_" + str(counter) + ".txt"
-                    
-                    resized_image_path = os.path.join(output_images_dir, resized_image_filename)
-                    cv2.imwrite(resized_image_path, resized_image)
+                with open(os.path.join(output_labels_dir, resized_image_labels_filename), "w") as f:
+                    for label in resized_image_labels:
+                        f.write(str(base_class) + " " + " ".join([str(x) for x in label]) + "\n")
+                counter += 1
+    
+    operations_stats[images_dir] = {}
+    operations_stats[images_dir]["individual_stats"] = individual_stats
+    operations_stats[images_dir]["general_stats"] = general_stats
+    operations_stats["resize_stat_name"] = resize_stat_name
+    operations_stats["resize_stat_value"] = resize_stat_value
+    operations_stats["resize_operations"] = resize_operations
 
-                    with open(os.path.join(output_labels_dir, resized_image_labels_filename), "w") as f:
-                        for label in resized_image_labels:
-                            f.write(str(base_class) + " " + " ".join([str(x) for x in label]) + "\n")
-                    counter += 1
-        
-        operations_stats[images_dir] = {}
-        operations_stats[images_dir]["individual_stats"] = individual_stats
-        operations_stats[images_dir]["general_stats"] = general_stats
-    operations_stats["resize_by"] = resize_by
-
-    return operations_stats
+    return operations_stats, break_metadatas
 
 if __name__ == "__main__":
-    # resize_images(images_dirs, labels_dirs, output_images_dirs, output_labels_dirs, resize_by="median")
-    operations_stats = resize_images(["clean_data"], ["clean_data"], ["clean_data_resized"], ["clean_data_resized"], resize_by="median", verbose=True)
+    # resize_images(images_dirs, labels_dirs, output_images_dirs, output_labels_dirs, resize_stat_name="median")
+    operations_stats, break_metadatas = resize_images("datasets/data_TEM/images/train", "datasets/data_TEM/labels/train", "clean_data_resized", "clean_data_resized", resize_stat_name="median", verbose=True)
     with open("resize_operations_stats.pkl", "wb") as f:
         pickle.dump(operations_stats, f)

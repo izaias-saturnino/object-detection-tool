@@ -6,9 +6,18 @@ import time
 from math import ceil
 from sklearn.linear_model import LinearRegression
 from ultralytics import settings
+import pickle
 
 # print("Settings:")
 # print(settings)
+
+def read_model_metadata(model_path, model):
+    model_name, _ = os.path.splitext(model)
+    metadata_filename = model_name + ".pkl"
+    metadata_path = os.path.join(model_path, metadata_filename)
+    with open(metadata_path, "rb") as file:
+        metadata = pickle.load(file)
+    return metadata
 
 def test_models(models_path, models, save_results, save_csv=True, write_ids=True, split="test"):
     run_dirs = []

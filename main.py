@@ -8,7 +8,7 @@ import threading
 import multiprocessing
 from config import load_config, write_config
 from image_pre_processing import pre_process_images, generate_labels
-from run_models import run_models
+from run_models import run_model
 from train_model import train_model
 
 image_metadata_filename = "image_metadata.pkl"
@@ -40,7 +40,7 @@ def retain_output(run_dirs):
 def run_detections(models_path, models, confidence, save_results, detection_path, save_csv=True, write_ids=True):
     print("Running detection...")
     try:
-        run_dirs = run_models(models_path, models, confidence, save_results, detection_path, save_csv=save_csv, write_ids=write_ids)
+        run_dirs, results_array = run_model(models_path, models, confidence, save_results, detection_path, save_csv=save_csv, write_ids=write_ids)
         retain_output(run_dirs)
     except:
         print("Error running detection.")
@@ -62,8 +62,6 @@ except:
     pass
 
 if mode == "detect":
-    # TODO: save resize_by config for each model after training and use this information to resize images before detection
-    # TODO: resize images with resize_by before detection
     print("Running detection...")
     run_detections("models", default_models, 0.5, True, clean_data, save_csv=True, write_ids=True)
 elif mode == "train":

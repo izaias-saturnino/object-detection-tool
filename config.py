@@ -2,19 +2,6 @@ import os
 import time
 import pickle
 
-def read_config(config_file, verbose):
-    config = {}
-    
-    # read config file with pickle
-    if os.path.exists(config_file):
-        with open(config_file, "rb") as f:
-            config = pickle.load(f)
-    else:
-        if verbose:
-            print("Config file not found.")
-    
-    return config
-    
 def load_config(config_file, verbose):
     config = {}
 

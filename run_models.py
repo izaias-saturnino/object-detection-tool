@@ -5,48 +5,46 @@ from ultralytics import YOLO
 import shutil
 import sys
 import time
+from object_resizer import resize_images
+from train_model import read_model_metadata
 
-model_folder = "models"
-model_names = ["yolov8n_black_particles-obb_phase_1.pt", "yolo11n-obb_test.pt_20250218-072546.pt"]
-confidence = 0.5
-save_results = True
-# dir_paths = ["datasets/data_TEM/images/train", "datasets/data_TEM/images/val"]
-dir_paths = ["to_execute"]
+def restore_broken_detection(results, break_metadatas):
+    print("Not implemented.")
+    return results
 
-def run_model(model_folder, model_name, confidence, save_results, dir_paths, save_csv=True, write_ids=True):
-    run_dirs = []
-    for dir_path in dir_paths:
-        images_path = dir_path
-        print("-" * 50)
-        print("Model:", model_name)
-        model_path = os.path.join(model_folder, model_name)
-        model = YOLO(model_path)
-        results = model.predict(images_path, conf=confidence, save=save_results, augment=True, show_labels=False, mode="val", split="test")
+def run_model(model_folder, model_name, confidence, save_results, images_dir, labels_dir, temp_data="temp_detection_data"):
+    model_metadata = read_model_metadata(model_folder, model_name)
+    resize_stat_name = model_metadata["resize_stat_name"]
+    resize_stat_value = model_metadata["resize_stat_value"]
 
-        current_time = time.strftime("%Y%m%d-%H%M%S")
+    _, break_metadatas = resize_images(images_dir, labels_dir, temp_data, temp_data, resize_stat_name, resize_stat_value, borders=True)
 
-        dir_path_name = dir_path.split("/")[-1]
+    print("-" * 50)
+    print("Model:", model_name)
+    model_path = os.path.join(model_folder, model_name)
+    model = YOLO(model_path)
+    results = model.predict(temp_data, conf=confidence, save=save_results, augment=True, show_labels=False, mode="val", split="test")
 
-        try:
-            run_dir = "runs_" + model_name + "_" + dir_path_name + "_" + current_time
-            shutil.move("runs", run_dir)
-            run_dirs.append(run_dir)
-        except:
-            pass
-        print("-" * 50)
+    current_time = time.strftime("%Y%m%d-%H%M%S")
 
-        if save_csv:
-            for result in results:
-                pass # TODO: save results to csv alongside the image names (write ids if write_ids is True)
+    images_dir_name = images_dir.split("/")[-1]
 
-    return run_dirs
+    try:
+        run_dir = "runs_" + model_name + "_" + images_dir_name + "_" + current_time
+        shutil.move("runs", run_dir)
+    except:
+        pass
+    print("-" * 50)
 
-def run_models(model_folder, model_names, confidence, save_results, dir_paths, save_csv=True, write_ids=True):
-    run_dirs = []
-    for model_name in model_names:
-        model_run_dirs = run_model(model_folder, model_name, confidence, save_results, dir_paths, save_csv=save_csv, write_ids=write_ids)
-        run_dirs.extend(model_run_dirs)
-    return run_dirs
+    # TODO: restore broken detection
+    results = restore_broken_detection(results, break_metadatas)
+
+    return run_dir, results
 
 if __name__ == "__main__":
-    run_models(model_folder, model_names, confidence, save_results, dir_paths)
+    model_run_dirs, results_array_model = run_model("models", "yolo11n-obb_test.pt_20250218-072546.pt", 0.5, True, "to_execute", "to_execute")
+    print("Results:")
+    print(results_array_model)
+    print("Run directories:")
+    print(model_run_dirs)
+    print("Done.")
