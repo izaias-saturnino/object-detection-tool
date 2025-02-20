@@ -78,6 +78,9 @@ def get_results_stats(results, obb_labels=True, verbose=False):
 
         if obb_labels:
             result_sizes = get_size_obbs(result)
+
+            if len(result_sizes) == 0:
+                raise Exception("Error: No labels found.")
         else:
             raise Exception("Error: Not implemented.")
 
@@ -254,6 +257,7 @@ def resize_images(images_dir, labels_dir, output_images_dir, output_labels_dir, 
 
     labels_dir_path = labels_dir
     results, obb_labels = read_results(labels_dir_path, verbose=False)
+
     individual_stats, general_stats = get_results_stats(results, obb_labels=obb_labels, verbose=False)
 
     if verbose:

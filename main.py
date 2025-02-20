@@ -3,6 +3,9 @@ import time
 from train_model import train_model
 import shutil
 import time
+import numpy as np
+import os
+import cv2
 import threading
 import multiprocessing
 from config import load_config, write_config
@@ -31,28 +34,86 @@ models_path = config["models_path"]
 patience = config["patience"]
 save_period = config["save_period"]
 resize_stat_name = config["resize_stat_name"]
+base_class = config["base_class"]
+
+def save_obbs_to_csv(results, output_path, write_ids=False):
+    for i, result in enumerate(results):
+        image_path = result.path
+        image_name, _ = os.path.splitext(os.path.basename(image_path))
+        csv_path = os.path.join(output_path, image_name + ".csv")
+
+        if write_ids:
+            image = cv2.imread(image_path)
+            image_output_path = os.path.join(os.path.dirname(output_path), os.path.basename(image_path))
+
+        image_name = os.path.basename(image_path)
+        obbs = results[i].obb.xyxyxyxy
+        with open(csv_path, "w") as file:
+            file.write("obb_id, image_name, height, width, angle1, angle2, x1, y1, x2, y2, x3, y3, x4, y4\n")
+            obb_id = 1
+            for obb in obbs:
+                x1 = obb[0][0]
+                y1 = obb[0][1]
+                x2 = obb[1][0]
+                y2 = obb[1][1]
+                x3 = obb[2][0]
+                y3 = obb[2][1]
+                x4 = obb[3][0]
+                y4 = obb[3][1]
+                # calculate the height and width of the obb in pixels
+                height = ((y2 - y1)**2 + (x2 - x1)**2)**0.5
+                width = ((y3 - y2)**2 + (x3 - x2)**2)**0.5
+                # calculate the angle of the obb based on the first two points
+                angle1 = np.arctan2(y2 - y1, x2 - x1)
+                angle2 = np.arctan2(y3 - y2, x3 - x2)
+                file.write(f"{obb_id}, {image_name}, {height}, {width}, {angle1}, {angle2}, {x1}, {y1}, {x2}, {y2}, {x3}, {y3}, {x4}, {y4}\n")
+            
+                if write_ids:
+                    # draw the bounding boxes on the image
+                    height, width, _ = image.shape
+                    x1 = int(x1 * width)
+                    y1 = int(y1 * height)
+                    x2 = int(x2 * width)
+                    y2 = int(y2 * height)
+                    x3 = int(x3 * width)
+                    y3 = int(y3 * height)
+                    x4 = int(x4 * width)
+                    y4 = int(y4 * height)
+                    cv2.line(image, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                    cv2.line(image, (x2, y2), (x3, y3), (0, 255, 0), 2)
+                    cv2.line(image, (x3, y3), (x4, y4), (0, 255, 0), 2)
+                    cv2.line(image, (x4, y4), (x1, y1), (0, 255, 0), 2)
+
+                    # draw a number in the middle of the bounding box
+                    x = int((x1 + x2 + x3 + x4) / 4)
+                    y = int((y1 + y2 + y3 + y4) / 4)
+                    cv2.putText(image, str(obb_id), (x, y), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2, cv2.LINE_AA)
+
+                obb_id += 1
+
+            if write_ids:
+                # save the image with the bounding boxes
+                cv2.imwrite(image_output_path, image)
 
 def retain_output(run_dir):
     pass # TODO: retain output
 
-def run_detections(models_path, model_name, confidence, save_results, detection_path):
+def run_detections(models_path, model_name, confidence, save_results, detection_path, save_csv=False, write_ids=False):
     print("Running detection...")
     run_dir, results = run_model(models_path, model_name, confidence, save_results, detection_path, detection_path, temp_data)
-
     retain_output(run_dir)
+
+    if save_csv:
+        save_obbs_to_csv(results, detection_path, write_ids)
+
     # try:
-    #     run_dir, results = run_model(models_path, model_name, confidence, save_results, detection_path, detection_path)
-    #     retain_output(run_dir)
-    # except Exception as e:
-    #     print("Error running detection.")
-    #     print(e)
+    #     shutil.rmtree(temp_data)
+    # except:
+    #     pass
 
 def train_detection(model_name, base_model, data_file, max_epochs, models_path, patience=100, save_period=10):
     print("Training detection...")
-    try:
-        train_model(model_name, base_model, data_file, max_epochs, patience=patience, save_period=save_period, models_path=models_path, degrees=180, copy_paste=0.5, mixup=0.5, flipud=0.5, multi_scale=True)
-    except:
-        print("Error training detection.")
+    train_model(model_name, base_model, data_file, max_epochs, patience=patience, save_period=save_period, models_path=models_path, degrees=180, copy_paste=0.5, mixup=0.5, flipud=0.5, multi_scale=True)
 
 print("Pre-processing images...")
 pre_process_images(raw_data, temp_data, "image_metadata.pkl")
@@ -64,7 +125,7 @@ except:
     pass
 
 if mode == "detect":
-    run_detections("models", default_model, 0.5, True, clean_data)
+    run_detections("models", default_model, 0.5, True, clean_data, save_csv=save_csv, write_ids=write_ids)
 elif mode == "train":
     current_time = time.strftime("%Y%m%d-%H%M%S")
     model_name = "yolo11n_particles-obb" + current_time + ".pt"

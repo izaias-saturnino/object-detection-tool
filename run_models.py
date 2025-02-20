@@ -25,11 +25,6 @@ def run_model(model_folder, model_name, confidence, save_results, images_dir, la
     model = YOLO(model_path)
     results = model.predict(temp_data, conf=confidence, save=save_results, augment=True, show_labels=False, mode="val", split="test")
 
-    try:
-        shutil.rmtree(temp_data)
-    except:
-        pass
-
     current_time = time.strftime("%Y%m%d-%H%M%S")
 
     images_dir_name = images_dir.split("/")[-1]

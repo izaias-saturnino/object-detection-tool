@@ -26,6 +26,8 @@ def load_config(config_file, verbose=False):
     save_period = 10
 
     resize_stat_name = "median"
+
+    base_class = 0
     
     # read config file with pickle
     if os.path.exists(config_file):
@@ -65,6 +67,8 @@ def load_config(config_file, verbose=False):
         config["save_period"] = save_period
     if "resize_stat_name" not in config:
         config["resize_stat_name"] = resize_stat_name
+    if "base_class" not in config:
+        config["base_class"] = base_class
 
     return config
 
