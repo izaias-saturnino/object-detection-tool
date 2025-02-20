@@ -242,7 +242,7 @@ def resize_image_and_labels(image, labels, resize):
         new_images, new_labels = break_image(image, labels, resize)
         return new_images, new_labels
 
-def resize_images(images_dirs, labels_dirs, output_images_dirs, output_labels_dirs, resize_by="median", base_class=0, acceptable_error=0.001):
+def resize_images(images_dirs, labels_dirs, output_images_dirs, output_labels_dirs, resize_by="median", base_class=0, acceptable_error=0.001, verbose=False):
     operations_stats = {}
     for images_dir, labels_dir, output_images_dir, output_labels_dir in zip(images_dirs, labels_dirs, output_images_dirs, output_labels_dirs):
         if not os.path.exists(output_images_dir):
@@ -260,7 +260,8 @@ def resize_images(images_dirs, labels_dirs, output_images_dirs, output_labels_di
         results, obb_labels = read_results(labels_dir_path, verbose=False)
         individual_stats, general_stats = get_results_stats(results, obb_labels=obb_labels, verbose=False)
 
-        print("general_stats:", general_stats)
+        if verbose:
+            print("general_stats:", general_stats)
 
         resize_operations = {}
 
@@ -268,10 +269,12 @@ def resize_images(images_dirs, labels_dirs, output_images_dirs, output_labels_di
 
         for key in individual_stats:
             individual_stat = individual_stats[key]
-            print("individual_stat:", individual_stat)
-            print("key:", key)
             individual_resize_stat = individual_stat[resize_by]
             resize_operations[key] = individual_resize_stat/general_stats_resize_stat
+
+            if verbose:
+                print("key:", key)
+                print("individual_stat:", individual_stat)
 
         # if bigger than one, make image smaller, if smaller than one, fill image to be able to break it down into smaller images (int)
         for key in resize_operations:
@@ -291,15 +294,19 @@ def resize_images(images_dirs, labels_dirs, output_images_dirs, output_labels_di
             if abs(resize_factor - 1) < acceptable_error:
                 cv2.imwrite(output_image_path, image)
             else:
-                print("key:", key)
-                print("resize_factor:", resize_factor)
                 resized_images, resized_labels = resize_image_and_labels(image, results[key], resize_factor)
-                counter = 0
+                counter = 1
                 for resized_image, resized_image_labels in zip(resized_images, resized_labels):
-                    resized_image_filename = key + "_" + str(counter) + default_image_type
+                    if len(resized_images) == 1:
+                        resized_image_filename = key + default_image_type
+                        resized_image_labels_filename = key + ".txt"
+                    else:
+                        resized_image_filename = key + "_" + str(counter) + default_image_type
+                        resized_image_labels_filename = key + "_" + str(counter) + ".txt"
+                    
                     resized_image_path = os.path.join(output_images_dir, resized_image_filename)
                     cv2.imwrite(resized_image_path, resized_image)
-                    resized_image_labels_filename = key + "_" + str(counter) + ".txt"
+
                     with open(os.path.join(output_labels_dir, resized_image_labels_filename), "w") as f:
                         for label in resized_image_labels:
                             f.write(str(base_class) + " " + " ".join([str(x) for x in label]) + "\n")
@@ -314,4 +321,6 @@ def resize_images(images_dirs, labels_dirs, output_images_dirs, output_labels_di
 
 if __name__ == "__main__":
     # resize_images(images_dirs, labels_dirs, output_images_dirs, output_labels_dirs, resize_by="median")
-    operations_stats = resize_images(["clean_data"], ["clean_data"], ["clean_data_resized"], ["clean_data_resized"], resize_by="median")
+    operations_stats = resize_images(["clean_data"], ["clean_data"], ["clean_data_resized"], ["clean_data_resized"], resize_by="median", verbose=True)
+    with open("resize_operations_stats.pkl", "wb") as f:
+        pickle.dump(operations_stats, f)
