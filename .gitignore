@@ -168,3 +168,4 @@ ui copy.py
 /clean_data_resized
 /runs*
 /detection_data
+config.pkl
