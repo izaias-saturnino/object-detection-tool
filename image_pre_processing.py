@@ -117,17 +117,19 @@ def pre_process_image(origin_image_path, destination_path=None, image_types=imag
 
     return img
 
-def pre_process_images(input_path, output_path, image_metadata_filename, verbose=True, image_types=image_types):
+def pre_process_images(input_path, output_path, image_metadata_filename, verbose=False, image_types=image_types):
     print("Finding new images...")
     new_images = find_images(input_path, image_metadata_filename=image_metadata_filename, verbose=verbose, image_types=image_types)
     if len(new_images) > 0:
-        print("New images found")
-        print("Pre-process input path:", input_path)
-        print("Pre-process output path:", output_path)
+        if verbose:
+            print("New images found")
+            print("Pre-process input path:", input_path)
+            print("Pre-process output path:", output_path)
         for image in new_images:
             pre_process_image(os.path.join(input_path, image), output_path)
     else:
-        print("No new images found.")
+        if verbose:
+            print("No new images found.")
 
 def generate_labels(origin_path, destination_path, oriented_bb=True, diameter_annotation=True, draw_obj_bboxes=False, image_types=image_types, verbose=False):
     if os.path.exists(origin_path) == False:

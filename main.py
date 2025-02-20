@@ -1,7 +1,6 @@
 import shutil
 import time
 from train_model import train_model
-from run_models import run_models
 import shutil
 import time
 import threading
@@ -24,26 +23,29 @@ mode = config["mode"]
 raw_data = config["raw_data"]
 temp_data = config["temp_data"]
 clean_data = config["clean_data"]
-default_models = config["default_models"]
+default_model = config["default_model"]
 default_base_model = config["default_base_model"]
 default_yaml = config["default_yaml"]
 max_epochs = config["max_epochs"]
 models_path = config["models_path"]
 patience = config["patience"]
 save_period = config["save_period"]
-resize_by = config["resize_by"]
+resize_stat_name = config["resize_stat_name"]
 
-def retain_output(run_dirs):
-    for run_dir in run_dirs:
-        pass # TODO: retain output
+def retain_output(run_dir):
+    pass # TODO: retain output
 
-def run_detections(models_path, models, confidence, save_results, detection_path, save_csv=True, write_ids=True):
+def run_detections(models_path, model_name, confidence, save_results, detection_path):
     print("Running detection...")
-    try:
-        run_dirs, results_array = run_model(models_path, models, confidence, save_results, detection_path, save_csv=save_csv, write_ids=write_ids)
-        retain_output(run_dirs)
-    except:
-        print("Error running detection.")
+    run_dir, results = run_model(models_path, model_name, confidence, save_results, detection_path, detection_path, temp_data)
+
+    retain_output(run_dir)
+    # try:
+    #     run_dir, results = run_model(models_path, model_name, confidence, save_results, detection_path, detection_path)
+    #     retain_output(run_dir)
+    # except Exception as e:
+    #     print("Error running detection.")
+    #     print(e)
 
 def train_detection(model_name, base_model, data_file, max_epochs, models_path, patience=100, save_period=10):
     print("Training detection...")
@@ -62,10 +64,8 @@ except:
     pass
 
 if mode == "detect":
-    print("Running detection...")
-    run_detections("models", default_models, 0.5, True, clean_data, save_csv=True, write_ids=True)
+    run_detections("models", default_model, 0.5, True, clean_data)
 elif mode == "train":
-    print("Training detection...")
     current_time = time.strftime("%Y%m%d-%H%M%S")
     model_name = "yolo11n_particles-obb" + current_time + ".pt"
     train_detection(model_name, default_base_model, default_yaml, max_epochs, models_path, patience=patience, save_period=save_period)

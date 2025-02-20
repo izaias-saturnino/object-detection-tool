@@ -183,8 +183,8 @@ def break_image(image, labels, resize, borders=False):
     for i in range(ceil(height/height_step)):
         for j in range(ceil(width/width_step)):
             new_image = np.ones((new_height, new_width, channels), np.uint8) * 255
-            starting_height = i * height_step
-            starting_width = j * width_step
+            starting_height = ceil(i * height_step)
+            starting_width = ceil(j * width_step)
             next_height = min(starting_height + new_height, height)
             next_width = min(starting_width + new_width, width)
             if starting_height >= height or starting_width >= width:

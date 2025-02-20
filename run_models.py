@@ -12,7 +12,7 @@ def restore_broken_detection(results, break_metadatas):
     print("Not implemented.")
     return results
 
-def run_model(model_folder, model_name, confidence, save_results, images_dir, labels_dir, temp_data="temp_detection_data"):
+def run_model(model_folder, model_name, confidence, save_results, images_dir, labels_dir, temp_data):
     model_metadata = read_model_metadata(model_folder, model_name)
     resize_stat_name = model_metadata["resize_stat_name"]
     resize_stat_value = model_metadata["resize_stat_value"]
@@ -24,6 +24,11 @@ def run_model(model_folder, model_name, confidence, save_results, images_dir, la
     model_path = os.path.join(model_folder, model_name)
     model = YOLO(model_path)
     results = model.predict(temp_data, conf=confidence, save=save_results, augment=True, show_labels=False, mode="val", split="test")
+
+    try:
+        shutil.rmtree(temp_data)
+    except:
+        pass
 
     current_time = time.strftime("%Y%m%d-%H%M%S")
 
