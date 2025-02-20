@@ -45,7 +45,10 @@ def save_obbs_to_csv(results, output_path, write_ids=False):
 
         if write_ids:
             image = cv2.imread(image_path)
-            image_output_path = os.path.join(os.path.dirname(output_path), os.path.basename(image_path))
+            image_filename = os.path.basename(image_path)
+            image_name, image_extension = os.path.splitext(image_filename)
+            image_filename = image_name + "_with_obbs" + image_extension
+            image_output_path = os.path.join(output_path, image_filename)
 
         image_name = os.path.basename(image_path)
         obbs = results[i].obb.xyxyxyxy
