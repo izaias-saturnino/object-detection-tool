@@ -328,9 +328,3 @@ def resize_images(images_dir, labels_dir, output_images_dir, output_labels_dir, 
     operations_stats["resize_operations"] = resize_operations
 
     return operations_stats, break_metadatas
-
-if __name__ == "__main__":
-    # resize_images(images_dirs, labels_dirs, output_images_dirs, output_labels_dirs, resize_stat_name="median")
-    operations_stats, break_metadatas = resize_images("datasets/data_TEM/images/train", "datasets/data_TEM/labels/train", "clean_data_resized", "clean_data_resized", resize_stat_name="median", verbose=True)
-    with open("resize_operations_stats.pkl", "wb") as f:
-        pickle.dump(operations_stats, f)

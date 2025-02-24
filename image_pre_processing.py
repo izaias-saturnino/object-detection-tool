@@ -255,13 +255,3 @@ def generate_labels(origin_path, destination_path, oriented_bb=True, diameter_an
         drawn_image_name = image_name[:-4] + "_drawn" + image_extension
         if draw_obj_bboxes:
             cv2.imwrite(os.path.join(destination_path, drawn_image_name), new_img_no_lines)
-
-if __name__ == "__main__":
-    print("Pre-processing images...")
-    pre_process_images("raw_data", "temp_data", "image_metadata.pkl")
-    print("Generating labels...")
-    generate_labels("temp_data", "clean_data", oriented_bb=True)
-    try:
-        shutil.rmtree("temp_data")
-    except:
-        pass
