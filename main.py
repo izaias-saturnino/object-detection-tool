@@ -13,7 +13,6 @@ from image_pre_processing import pre_process_images, generate_labels
 from run_models import run_model
 from train_model import train_model
 
-image_metadata_filename = "image_metadata.pkl"
 config_file = "config.pkl"
 verbose = True
 
@@ -27,6 +26,7 @@ raw_data = config["raw_data"]
 temp_data = config["temp_data"]
 clean_data = config["clean_data"]
 detection_data = config["detection_data"]
+results_data = config["results_data"]
 default_model = config["default_model"]
 default_base_model = config["default_base_model"]
 default_yaml = config["default_yaml"]
@@ -37,10 +37,16 @@ save_period = config["save_period"]
 resize_stat_name = config["resize_stat_name"]
 base_class = config["base_class"]
 
-def save_obbs_to_csv(results, output_path, write_ids=False):
-    for i, result in enumerate(results):
-        image_path = result.path
-        image_name, _ = os.path.splitext(os.path.basename(image_path))
+def save_obbs_to_csv(results, input_path, output_path, write_ids=False):
+    if not os.path.exists(output_path):
+        os.makedirs(output_path)
+    if not os.path.exists(input_path):
+        raise Exception("Input path does not exist.")
+
+    for key in results:
+        result = results[key]
+        image_name = key
+        image_path = os.path.join(input_path, image_name + ".png")
         csv_path = os.path.join(output_path, image_name + ".csv")
 
         image = None
@@ -53,7 +59,7 @@ def save_obbs_to_csv(results, output_path, write_ids=False):
             image_output_path = os.path.join(output_path, image_filename)
 
         image_name = os.path.basename(image_path)
-        obbs = results[i].obb.xyxyxyxy
+        obbs = result
 
         # order the obbs by their y1 value and then by their x1 value
         obbs = sorted(obbs, key=lambda obb: (obb[0][1], obb[0][0]))
@@ -105,23 +111,25 @@ def save_obbs_to_csv(results, output_path, write_ids=False):
                 # save the image with the bounding boxes
                 cv2.imwrite(image_output_path, image)
 
-def retain_output(run_dir):
-    pass # TODO: retain output
-
-def run_detections(models_path, model_name, confidence, save_results, detection_path, save_csv=False, write_ids=False):
+def run_detections(models_path, model_name, confidence, save_results, detection_path, results_data, save_csv=False, write_ids=False, retain_output=False):
     print("Running detection...")
     run_dir, results = run_model(models_path, model_name, confidence, save_results, detection_path, detection_path, detection_data)
-    retain_output(run_dir)
+    
+    if not retain_output:
+        try:
+            shutil.rmtree(run_dir)
+        except:
+            pass
 
     if save_csv:
-        save_obbs_to_csv(results, detection_data, write_ids)
+        save_obbs_to_csv(results, detection_path, results_data, write_ids)
 
 def train_detection(model_name, base_model, data_file, max_epochs, models_path, patience=100, save_period=10):
     print("Training detection...")
     train_model(model_name, base_model, data_file, max_epochs, patience=patience, save_period=save_period, models_path=models_path, degrees=180, copy_paste=0.5, mixup=0.5, flipud=0.5, multi_scale=True)
 
 print("Pre-processing images...")
-pre_process_images(raw_data, temp_data, "image_metadata.pkl")
+pre_process_images(raw_data, temp_data, image_metadata_filename)
 print("Generating labels...")
 generate_labels(temp_data, clean_data, oriented_bb=True)
 try:
@@ -130,7 +138,7 @@ except:
     pass
 
 if mode == "detect":
-    run_detections("models", default_model, 0.5, True, clean_data, save_csv=save_csv, write_ids=write_ids)
+    run_detections("models", default_model, 0.5, True, clean_data, results_data, save_csv=save_csv, write_ids=write_ids)
 elif mode == "train":
     current_time = time.strftime("%Y%m%d-%H%M%S")
     model_name = "yolo11n_particles-obb" + current_time + ".pt"
