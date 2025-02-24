@@ -32,7 +32,7 @@ def run_model(model_folder, model_name, confidence, save_results, images_dir, la
     except:
         pass
 
-    print("Restoring broken detections...")
+    print("Post-processing detections...")
     results = restore_broken_detection(results, break_metadatas)
 
     return run_dir, results
