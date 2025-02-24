@@ -7,23 +7,20 @@ import sys
 import time
 from object_resizer import resize_images
 from train_model import read_model_metadata
+from math import ceil, floor
+from detection_post_processing import restore_broken_detection
 
-def restore_broken_detection(results, break_metadatas):
-    print("Not implemented.")
-    return results
-
-def run_model(model_folder, model_name, confidence, save_results, images_dir, labels_dir, temp_data):
+def run_model(model_folder, model_name, confidence, save_results, images_dir, labels_dir, detection_path):
     model_metadata = read_model_metadata(model_folder, model_name)
     resize_stat_name = model_metadata["resize_stat_name"]
     resize_stat_value = model_metadata["resize_stat_value"]
 
-    _, break_metadatas = resize_images(images_dir, labels_dir, temp_data, temp_data, resize_stat_name, resize_stat_value, borders=True)
+    _, break_metadatas = resize_images(images_dir, labels_dir, detection_path, detection_path, resize_stat_name, resize_stat_value, borders=True)
 
-    print("-" * 50)
     print("Model:", model_name)
     model_path = os.path.join(model_folder, model_name)
     model = YOLO(model_path)
-    results = model.predict(temp_data, conf=confidence, save=save_results, augment=True, show_labels=False, mode="val", split="test")
+    results = model.predict(detection_path, conf=confidence, save=save_results, augment=True, show_labels=False, mode="val", split="test")
 
     current_time = time.strftime("%Y%m%d-%H%M%S")
 
@@ -34,17 +31,8 @@ def run_model(model_folder, model_name, confidence, save_results, images_dir, la
         shutil.move("runs", run_dir)
     except:
         pass
-    print("-" * 50)
 
-    # TODO: restore broken detection
+    print("Restoring broken detections...")
     results = restore_broken_detection(results, break_metadatas)
 
     return run_dir, results
-
-if __name__ == "__main__":
-    model_run_dirs, results_array_model = run_model("models", "yolo11n-obb_test.pt_20250218-072546.pt", 0.5, True, "to_execute", "to_execute")
-    print("Results:")
-    print(results_array_model)
-    print("Run directories:")
-    print(model_run_dirs)
-    print("Done.")
