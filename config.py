@@ -18,6 +18,8 @@ def load_config(config_file, verbose=False):
     detection_data = "detection_data"
     results_data = "results_data"
 
+    image_metadata_filename = "image_metadata.pkl"
+
     default_model = "yolo11n-obb_test.pt_20250218-072546.pt"
     default_base_model = "yolo11n-obb.pt"
 
@@ -57,6 +59,8 @@ def load_config(config_file, verbose=False):
         config["detection_data"] = detection_data
     if "results_data" not in config:
         config["results_data"] = results_data
+    if "image_metadata_filename" not in config:
+        config["image_metadata_filename"] = image_metadata_filename
     if "default_model" not in config:
         config["default_model"] = default_model
     if "default_base_model" not in config:

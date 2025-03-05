@@ -28,6 +28,7 @@ temp_data = config["temp_data"]
 clean_data = config["clean_data"]
 detection_data = config["detection_data"]
 results_data = config["results_data"]
+image_metadata_filename = config["image_metadata_filename"]
 default_model = config["default_model"]
 default_base_model = config["default_base_model"]
 default_yaml = config["default_yaml"]
@@ -37,7 +38,6 @@ patience = config["patience"]
 save_period = config["save_period"]
 resize_stat_name = config["resize_stat_name"]
 base_class = config["base_class"]
-
 
 def run_detections(models_path, model_name, confidence, save_results, detection_path, results_data, save_csv=False, write_ids=False, retain_output=False):
     print("Running detection...")
