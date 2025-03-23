@@ -39,7 +39,7 @@ save_period = config["save_period"]
 resize_stat_name = config["resize_stat_name"]
 base_class = config["base_class"]
 
-def run_detections(models_path, model_name, confidence, save_results, detection_path, results_data, save_csv=False, write_ids=False, retain_output=False):
+def run_detections(models_path, model_name, confidence, save_results, detection_path, detection_data, results_data, save_csv=False, write_ids=False, retain_output=False):
     print("Running detection...")
     run_dir, results = run_model(models_path, model_name, confidence, save_results, detection_path, detection_path, detection_data)
     
@@ -66,10 +66,20 @@ except:
     pass
 
 if mode == "detect":
-    run_detections("models", default_model, 0.5, True, clean_data, results_data, save_csv=save_csv, write_ids=write_ids)
+    run_detections("models", default_model, 0.5, True, clean_data, detection_data, results_data, save_csv=save_csv, write_ids=write_ids)
 elif mode == "train":
     current_time = time.strftime("%Y%m%d-%H%M%S")
     model_name = "yolo11n_particles-obb" + current_time + ".pt"
     train_detection(model_name, default_base_model, default_yaml, max_epochs, models_path, patience=patience, save_period=save_period)
+
+try:
+    shutil.rmtree(clean_data)
+except:
+    pass
+
+try:
+    shutil.rmtree(detection_data)
+except:
+    pass
 
 write_config(config, config_file)
