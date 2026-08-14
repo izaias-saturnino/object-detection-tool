@@ -435,5 +435,5 @@ This project is released under the MIT License. See [`LICENSE`](LICENSE) for det
 ## References
 
 * [Ultralytics YOLO documentation](https://docs.ultralytics.com/)
-* [YOLOv8 documentation](https://docs.ultralytics.com/models/yolov11/)
+* [YOLOv11 documentation](https://docs.ultralytics.com/models/yolov11/)
 * [`yolo-nanoparticle`](https://github.com/izaias-saturnino/yolo-nanoparticle) — related nanoparticle detection research repository.
